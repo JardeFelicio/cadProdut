@@ -50,7 +50,7 @@ except Exception as e:
 
 #realiza conexão com o banco
 try:
-    conn = pyodbc.connect(f'DRIVER={driverOdbc};SERVER={hostName};DATABASE={dataBase};UID=VMDApp;PWD=VMD22041748;')
+    conn = pyodbc.connect(f'DRIVER={driverOdbc};SERVER={hostName};DATABASE={dataBase};UID='';PWD='';')
     cursor = conn.cursor()
     logging.info(date_time()+" CONEXAO DB REALIZADA")
 except Exception as e:
@@ -62,13 +62,14 @@ finally:
 
 
 #Funções DB
-cnxn = (f'DRIVER={driverOdbc};SERVER={hostName};DATABASE={dataBase};UID=VMDApp;PWD=VMD22041748;')
-
+cnxn = (f'DRIVER={driverOdbc};SERVER={hostName};DATABASE={dataBase};UID='';PWD='';')
+produtos =[]
+produtos_abc =[]
 
 def connect_db():
     """Connect DB"""
     try:
-        conn = pyodbc.connect(f'DRIVER={driverOdbc};SERVER={hostName};DATABASE={dataBase};UID=sa;PWD=infarma2015.1;')
+        conn = pyodbc.connect(f'DRIVER={driverOdbc};SERVER={hostName};DATABASE={dataBase};UID='';PWD='';')
         logging.info(date_time()+" CONNECT DB REALIZADA")
         return conn 
     except Exception as e:
@@ -110,13 +111,44 @@ def update_ms():
     try:
         conn = connect_db()
         cursor = conn.cursor()
-        sql = ("""UPDATE PR SET PR.NUM_REGMS=PA.NUM_REGMS ,PR.Cod_AbcFar=PA.Cod_AbcFar
-        FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
-        ON PR.Cod_EAN= PA.Cod_EAN""")
-
+        sql = ("""
+        SELECT T.Cod_EAN
+        FROM PRODU T INNER JOIN Produtos_PlanilhaABC P
+        ON T.Cod_EAN = P.Cod_EAN
+        WHERE (T.NUM_REGMS IS NULL OR T.NUM_REGMS!= P.NUM_REGMS)
+        AND
+        LEN(P.NUM_REGMS )=13
+        """)
+        
         cursor.execute(sql)
-        cursor.commit()
+        result = cursor.fetchall()
+        produtos_ms = []
+        for i in result:
+            if i[0] != None:
+                produtos_ms.append(int(i[0]))
+            else:
+                pass
+        
+        logging.info(date_time()+" PRODUTOS COM MS DIVERGENTE:"+str(len(produtos_ms)))
 
+        for ean in produtos_ms:
+            sql = (f"""UPDATE PR SET PR.NUM_REGMS=PA.NUM_REGMS ,PR.Cod_AbcFar=PA.Cod_AbcFar
+            FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
+            ON PR.Cod_EAN= PA.Cod_EAN
+            WHERE PR.Cod_EAN = '{ean}'
+            AND 
+			(
+			PR.NUM_REGMS IS NULL OR
+			PR.NUM_REGMS<>PA.NUM_REGMS OR
+			PR.Cod_AbcFar IS NULL OR
+			PR.Cod_AbcFar != PA.Cod_AbcFar
+            )
+            """)
+            cursor.execute(sql)
+            cursor.commit()
+            print(sql)
+        
+        print("Concluido")
         logging.info(date_time()+" UPDATE NUM_REGMS CONCLUIDO")
         tela.labelInfoMs.setText('Update NUM_REGMS realizado')
         
@@ -136,12 +168,50 @@ def update_ncm():
     try:
         conn = connect_db()
         cursor = conn.cursor()
-        sql = ("""UPDATE PR SET PR.Cod_Ncm=PA.Cod_Ncm 
-        FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
-        ON PR.Cod_EAN= PA.Cod_EAN
-        WHERE PA.Cod_Ncm IS NOT NULL AND PA.Cod_Ncm !='' AND LEN(PA.Cod_Ncm)=8""")
+
+        sql = ("""
+        SELECT T.Cod_EAN
+        FROM PRODU T INNER JOIN Produtos_PlanilhaABC P
+        ON T.Cod_EAN = P.Cod_EAN
+        WHERE (T.Cod_Ncm IS NULL OR T.Cod_Ncm!= P.Cod_Ncm)
+		AND ( 
+		P.Cod_Ncm != ''
+		AND P.Cod_Ncm IS NOT NULL
+		AND LEN(P.Cod_Ncm)=8
+		)
+        """)
+        
         cursor.execute(sql)
-        cursor.commit()
+        result = cursor.fetchall()
+        produtos_ncm = []
+
+        for i in result:
+            if i[0] != None:
+                produtos_ncm.append(int(i[0]))
+            else:
+                pass
+        
+        logging.info(date_time()+" PRODUTOS COM NCM DIVERGENTE:"+str(len(produtos_ncm)))
+        
+        for ean in produtos_ncm:
+            sql = (f"""
+            UPDATE PR SET PR.Cod_Ncm=PA.Cod_Ncm 
+            FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
+            ON PR.Cod_EAN= PA.Cod_EAN
+            WHERE PR.Cod_EAN = '{ean}'
+            AND PA.Cod_Ncm IS NOT NULL
+            AND PA.Cod_Ncm !=''
+            AND LEN(PA.Cod_Ncm)=8
+            AND
+			(
+			PR.Cod_Ncm IS NULL OR
+			PR.Cod_Ncm<>PA.Cod_Ncm 
+            )
+            """)
+
+            cursor.execute(sql)
+            cursor.commit()
+
 
         logging.info(date_time()+" UPDATE NCM CONCLUIDO")
         tela.labelInfoNcm.setText('Update NCM realizado')
@@ -162,13 +232,48 @@ def update_cest():
     try:
         conn = connect_db()
         cursor = conn.cursor()
-        sql = ("""UPDATE PR SET PR.Cod_CEST=PA.Cod_CEST 
-        FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
-        ON PR.Cod_EAN= PA.Cod_EAN
-        WHERE PA.Cod_CEST IS NOT NULL AND PA.Cod_CEST !='' AND LEN(PA.Cod_CEST)=7""")
 
+        sql = ("""
+        SELECT T.Cod_EAN
+        FROM PRODU T INNER JOIN Produtos_PlanilhaABC P
+        ON T.Cod_EAN = P.Cod_EAN
+        WHERE (T.Cod_CEST IS NULL OR T.Cod_CEST!= P.Cod_CEST)
+		AND 
+        (P.Cod_CEST != '' AND P.Cod_CEST IS NOT NULL AND LEN(P.Cod_CEST)=7)
+        """)
+        
         cursor.execute(sql)
-        cursor.commit()
+        result = cursor.fetchall()
+        produtos_cest = []
+
+        for i in result:
+            if i[0] != None:
+                produtos_cest.append(int(i[0]))
+            else:
+                pass
+        
+        logging.info(date_time()+" PRODUTOS COM CEST DIVERGENTE:"+str(len(produtos_cest)))
+
+        for ean in produtos_cest:
+
+            sql = (f"""
+            UPDATE PR SET PR.Cod_CEST=PA.Cod_CEST 
+            FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
+            ON PR.Cod_EAN= PA.Cod_EAN
+            WHERE PR.Cod_EAN = '{ean}'
+            A.Cod_CEST IS NOT NULL AND 
+            PA.Cod_CEST !='' AND 
+            LEN(PA.Cod_CEST)=7
+            AND
+            (
+			PR.Cod_CEST IS NULL OR
+			PR.Cod_CEST<>PA.Cod_CEST 
+            )
+            
+            """)
+
+            cursor.execute(sql)
+            cursor.commit()
 
         logging.info(date_time()+" UPDATE CEST CONCLUIDO")
         tela.labelInfoCest.setText('Update CEST realizado')
@@ -190,38 +295,92 @@ def update_ctrlista():
     try:
         conn = connect_db()
         cursor = conn.cursor()
+
         sql = ("""
-        --LISTA P
-        UPDATE PR SET PR.Ctr_Lista='P'
-        FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
-        ON PR.Cod_EAN= PA.Cod_EAN
-        WHERE PA.Ctr_Lista = 'LISTA POSITIVA'
-        
-
-
-        --LISTA N
-        UPDATE PR SET PR.Ctr_Lista='N'
-        FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
-        ON PR.Cod_EAN= PA.Cod_EAN
-        WHERE PA.Ctr_Lista = 'LISTA NEGATIVA'
-        
-
-
-        --LISTA X
-        UPDATE PR SET PR.Ctr_Lista='X'
-        FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
-        ON PR.Cod_EAN= PA.Cod_EAN
-        WHERE PA.Ctr_Lista = 'LISTA NEUTRA'
-        
-
-
-        --LISTA O
-        UPDATE PR SET PR.Ctr_Lista='O'
-        FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
-        ON PR.Cod_EAN= PA.Cod_EAN
-        WHERE PA.Ctr_Lista = 'OUTROS'
-        
+        SELECT T.Cod_EAN
+        FROM PRODU T 
+		INNER JOIN Produtos_PlanilhaABC P
+        ON T.Cod_EAN = P.Cod_EAN
+        WHERE (T.Ctr_Lista IS NULL OR 
+		T.Ctr_Lista!= 
+		CASE 
+		WHEN P.Ctr_Lista ='LISTA POSITIVA' THEN 'P'
+		WHEN P.Ctr_Lista ='LISTA NEGATIVA' THEN 'N'
+		WHEN P.Ctr_Lista ='LISTA NEUTRA' THEN 'X'
+		WHEN P.Ctr_Lista ='OUTROS' THEN 'O'
+		END
+		)
         """)
+        
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        produtos_ctrlista = []
+
+        for i in result:
+            if i[0] != None:
+                produtos_ctrlista.append(int(i[0]))
+            else:
+                pass
+        
+        logging.info(date_time()+" PRODUTOS COM CTR LISTA DIVERGENTE:"+str(len(produtos_ctrlista)))
+        for ean in produtos_ctrlista:
+            sql = (f"""
+            --LISTA P
+            UPDATE PR SET PR.Ctr_Lista='P'
+            FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
+            ON PR.Cod_EAN= PA.Cod_EAN
+            WHERE PR.Cod_EAN = '{ean}'
+            PA.Ctr_Lista = 'LISTA POSITIVA'
+            AND 
+             (
+			PR.Ctr_Lista IS NULL OR
+			PR.Ctr_Lista<>PA.Ctr_Lista
+            )
+            
+            
+
+
+            --LISTA N
+            UPDATE PR SET PR.Ctr_Lista='N'
+            FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
+            ON PR.Cod_EAN= PA.Cod_EAN
+            WHERE PR.Cod_EAN = '{ean}'
+            PA.Ctr_Lista = 'LISTA NEGATIVA'
+            AND 
+             (
+			PR.Ctr_Lista IS NULL OR
+			PR.Ctr_Lista<>PA.Ctr_Lista
+            )
+            
+
+
+            --LISTA X
+            UPDATE PR SET PR.Ctr_Lista='X'
+            FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
+            ON PR.Cod_EAN= PA.Cod_EAN
+            WHERE PR.Cod_EAN = '{ean}'
+            PA.Ctr_Lista = 'LISTA NEUTRA'
+            AND 
+             (
+			PR.Ctr_Lista IS NULL OR
+			PR.Ctr_Lista<>PA.Ctr_Lista
+            )
+            
+
+
+            --LISTA O
+            UPDATE PR SET PR.Ctr_Lista='O'
+            FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
+            ON PR.Cod_EAN= PA.Cod_EAN
+            WHERE PR.Cod_EAN = '{ean}'
+            PA.Ctr_Lista = 'OUTROS'
+            AND 
+             (
+			PR.Ctr_Lista IS NULL OR
+			PR.Ctr_Lista<>PA.Ctr_Lista
+            )
+            
+            """)
 
         cursor.execute(sql)
         cursor.commit()
@@ -246,7 +405,11 @@ def create_tables():
     try:
         conn = connect_db()
         cursor = conn.cursor()
-        sql=("""CREATE TABLE Produtos_Teste (
+        sql=("""
+            IF NOT EXISTS 
+            (SELECT * FROM sysobjects WHERE NAME='Produtos_Teste' AND xtype='U')
+            CREATE TABLE Produtos_Teste 
+            (
 	        [Cod_Produt] [int] NOT NULL,
 			[Des_Produt] [varchar](40) NULL,
 			[Cod_EAN] [varchar](14) NULL,
@@ -256,7 +419,8 @@ def create_tables():
 			[Cod_AbcFar] [int] NULL,
 			[Cod_CEST] [varchar](7) NULL,
 			[Cod_PriAtv] [int] NULL,
-	        )""")
+	        )
+            """)
 
         cursor.execute(sql)
         #cursor.commit()
@@ -270,7 +434,11 @@ def create_tables():
         cursor.commit()
         logging.info(date_time()+' INSERT TABLE Produtos_Teste')
 
-        sql = ("""CREATE TABLE Produtos_PlanilhaABC (
+        sql = ("""
+            IF NOT EXISTS 
+            (SELECT * FROM sysobjects WHERE NAME='Produtos_PlanilhaABC' AND xtype='U')
+            CREATE TABLE Produtos_PlanilhaABC 
+            (
 			[Cod_EAN] [varchar](14) NULL,
 			[NUM_REGMS] [varchar](20) NULL,
 			[Cod_Ncm] [varchar](12) NULL,
@@ -278,7 +446,8 @@ def create_tables():
 			[Cod_AbcFar] [int] NULL,
 			[Cod_CEST] [varchar](7) NULL,
 			[Des_PriAtv] [varchar](250) NULL,
-	        )""")
+	        )
+            """)
 
         cursor.execute(sql)
         print(sql)
@@ -300,10 +469,18 @@ def drop_tables():
     try:
         conn = connect_db()
         cursor = conn.cursor()
-        sql = """DROP TABLE IF EXISTS [dbo].[Produtos_Teste]"""
+        sql = """
+            IF EXISTS 
+            (SELECT * FROM sysobjects WHERE NAME='Produtos_Teste' AND xtype='U')
+            DROP TABLE IF EXISTS [dbo].[Produtos_Teste]
+            """
         cursor.execute(sql)
         logging.info(date_time()+' DROP TABLE 1 REALIZADO')
-        sql = """DROP TABLE IF EXISTS [dbo].[Produtos_PlanilhaABC]"""
+        sql = """
+        IF EXISTS 
+        (SELECT * FROM sysobjects WHERE NAME='Produtos_PlanilhaABC' AND xtype='U')
+        DROP TABLE IF EXISTS [dbo].[Produtos_PlanilhaABC]
+        """
         cursor.execute(sql)
         logging.info(date_time()+' DROP TABLE 2 REALIZADO')
         cursor.commit()
@@ -365,10 +542,8 @@ def insert_prod_pla():
     """Insert into Produtos_PlanilhaABC"""
     try:
         produtos_cad = 0
-        produtos_not_cad = 0
-        produtos =[]
+        produtos_not_cad = 0        
         count = 0
-
         conn = connect_db()
         cursor = conn.cursor()
 
@@ -409,13 +584,14 @@ def insert_prod_pla():
                 else:
                     cod_cest = int(cod_cest)
                     
-
+                notexists = (f"IF NOT EXISTS (SELECT 1 FROM Produtos_PlanilhaABC WHERE Cod_EAN ='{ean}') ")
                 values = (f"'{ean}','{num_regms}','{cod_ncm}','{ctr_lista}','{cod_abcfar}','{cod_cest}','{des_priatv}')")
                 insert = """INSERT INTO Produtos_PlanilhaABC ([Cod_EAN],[NUM_REGMS],[Cod_Ncm],[Ctr_Lista],[Cod_AbcFar],[Cod_CEST],[Des_PriAtv])
                             VALUES ("""
 
-                sql = insert + values
-                #print(sql)
+                sql = notexists+ insert + values
+                produtos_abc.append(ean)
+               
                 cursor.execute(sql)
                 cursor.commit()
                 produtos_cad += 1
