@@ -2,45 +2,47 @@ import pandas
 import pyodbc
 import configparser
 import logging
-from  datetime import date, datetime
-from PyQt5 import uic,QtWidgets
+from datetime import date, datetime
+from PyQt5 import uic, QtWidgets
 from sqlalchemy import create_engine
 from sqlalchemy.engine import URL
 import math
 
-app=QtWidgets.QApplication([])
-tela=uic.loadUi("tela.ui")
+app = QtWidgets.QApplication([])
+tela = uic.loadUi("tela.ui")
+
 
 def data_atual():
-  """Retorna data atual"""
-  return str(date.today().strftime("%d%m%y"))
+    """Retorna data atual"""
+    return str(date.today().strftime("%d%m%y"))
 
 def date_time():
-  """Retorna data e hora atual"""
-  return str(datetime.today().strftime("%d/%m/%Y  %H:%M:%S"))
+    """Retorna data e hora atual"""
+    return str(datetime.today().strftime("%d/%m/%Y  %H:%M:%S"))
 
-#Cria log
+# Cria log
 log_format = '%(asctime)'
-logging.basicConfig(filename='infarmaBal'+data_atual()+'.log',filemode='a',level=logging.INFO)
-logger=logging.getLogger('root')
+logging.basicConfig(filename='infarmaBal'+data_atual() +
+                    '.log', filemode='a', level=logging.INFO)
+logger = logging.getLogger('root')
 
 logging.info(date_time()+" PROGRAMA INICIADO")
 
-#Leitura do arquivo ini
+# Leitura do arquivo ini
 try:
     cfg = configparser.ConfigParser()
     cfg.read('Infarma.ini')
-    cod_loja=cfg.getint('SERVIDOR','Loja')
-    hostName=cfg.get('SERVIDOR','HostName')
-    dataBase=cfg.get('SERVIDOR','Database')
-    driverOdbc='{SQL Server}'
+    cod_loja = cfg.getint('SERVIDOR', 'Loja')
+    hostName = cfg.get('SERVIDOR', 'HostName')
+    dataBase = cfg.get('SERVIDOR', 'Database')
+    driverOdbc = '{SQL Server}'
     tela.labelDataCon.setText(f'{hostName} / {dataBase} - LOJA: {cod_loja}')
     logging.info(date_time()+" LEITURA DO ARQUIVO INI REALIZADA")
 except Exception as e:
     logging.info(date_time()+" LEITURA DO ARQUIVO INI ERRO")
     logging.warning(date_time()+' '+str(e))
-    
-#Leitura da planilha
+
+# Leitura da planilha
 try:
     df = pandas.read_excel('abcfarma.xlsx')
     logging.info(date_time()+" LEITURA DA PLANILHA REALIZADA")
@@ -48,9 +50,10 @@ except Exception as e:
     logging.info(date_time()+" LEITURA DA PLANILHA ERRO")
     logging.warning(date_time()+' '+str(e))
 
-#realiza conexão com o banco
+# realiza conexão com o banco
 try:
-    conn = pyodbc.connect(f'DRIVER={driverOdbc};SERVER={hostName};DATABASE={dataBase};UID='';PWD='';')
+    conn = pyodbc.connect(
+        f'DRIVER={driverOdbc};SERVER={hostName};DATABASE={dataBase};UID='';PWD='';')
     cursor = conn.cursor()
     logging.info(date_time()+" CONEXAO DB REALIZADA")
 except Exception as e:
@@ -61,17 +64,20 @@ finally:
     conn.close()
 
 
-#Funções DB
-cnxn = (f'DRIVER={driverOdbc};SERVER={hostName};DATABASE={dataBase};UID='';PWD='';')
-produtos =[]
-produtos_abc =[]
+# Funções DB
+cnxn = (
+    f'DRIVER={driverOdbc};SERVER={hostName};DATABASE={dataBase};UID='';PWD='';')
+produtos = []
+produtos_abc = []
+
 
 def connect_db():
     """Connect DB"""
     try:
-        conn = pyodbc.connect(f'DRIVER={driverOdbc};SERVER={hostName};DATABASE={dataBase};UID='';PWD='';')
+        conn = pyodbc.connect(
+            f'DRIVER={driverOdbc};SERVER={hostName};DATABASE={dataBase};UID='';PWD='';')
         logging.info(date_time()+" CONNECT DB REALIZADA")
-        return conn 
+        return conn
     except Exception as e:
         logging.info(date_time()+" CONNECT DB ERRO")
         logging.warning(date_time()+' '+str(e))
@@ -82,20 +88,21 @@ def gerar_excel():
         cnxn_url = URL.create("mssql+pyodbc", query={"odbc_connect": cnxn})
         engine = create_engine(cnxn_url)
 
-        query=("""SELECT * FROM Produtos_PlanilhaABC""")
-        atual = pandas.read_sql_query(query,engine)
-        atual.to_excel("Produtos_PlanilhaABC.xlsx",sheet_name='atual',index=False)   
+        query = ("""SELECT * FROM Produtos_PlanilhaABC""")
+        atual = pandas.read_sql_query(query, engine)
+        atual.to_excel("Produtos_PlanilhaABC.xlsx",
+                       sheet_name='atual', index=False)
 
         logging.info(date_time()+" GERAR EXCEL Produtos_PlanilhaABC REALIZADA")
 
-        query=("""SELECT * FROM Produtos_Teste""")
-        plabc = pandas.read_sql_query(query,engine)
-        plabc.to_excel("Produtos_Teste.xlsx",sheet_name='plabc',index=False) 
+        query = ("""SELECT * FROM Produtos_Teste""")
+        plabc = pandas.read_sql_query(query, engine)
+        plabc.to_excel("Produtos_Teste.xlsx", sheet_name='plabc', index=False)
 
         logging.info(date_time()+" GERAR EXCEL Produtos_Teste REALIZADA")
 
         tela.labelInfoExcel.setText('Excel Gerado')
-        
+
     except Exception as e:
         logging.info(date_time()+" GERAR EXCEL ERRO")
         logging.warning(date_time()+' '+str(e))
@@ -103,11 +110,11 @@ def gerar_excel():
     finally:
         logging.info(date_time()+" GERAR EXCEL FINALIZADA")
 
-#DML
+# DM
 
 def update_ms():
     """UPDATE PRODU SET NUM_REGMS"""
-    #NUM_REGMS
+    # NUM_REGMS
     try:
         conn = connect_db()
         cursor = conn.cursor()
@@ -119,7 +126,7 @@ def update_ms():
         AND
         LEN(P.NUM_REGMS )=13
         """)
-        
+
         cursor.execute(sql)
         result = cursor.fetchall()
         produtos_ms = []
@@ -128,8 +135,9 @@ def update_ms():
                 produtos_ms.append(int(i[0]))
             else:
                 pass
-        
-        logging.info(date_time()+" PRODUTOS COM MS DIVERGENTE:"+str(len(produtos_ms)))
+
+        logging.info(date_time()+" PRODUTOS COM MS DIVERGENTE:" +
+                     str(len(produtos_ms)))
 
         for ean in produtos_ms:
             sql = (f"""UPDATE PR SET PR.NUM_REGMS=PA.NUM_REGMS ,PR.Cod_AbcFar=PA.Cod_AbcFar
@@ -147,11 +155,11 @@ def update_ms():
             cursor.execute(sql)
             cursor.commit()
             print(sql)
-        
+
         print("Concluido")
         logging.info(date_time()+" UPDATE NUM_REGMS CONCLUIDO")
         tela.labelInfoMs.setText('Update NUM_REGMS realizado')
-        
+
     except Exception as e:
         logging.info(date_time()+" UPDATE NUM_REGMS ERRO")
         logging.warning(date_time()+' '+str(e))
@@ -164,7 +172,7 @@ def update_ms():
 
 def update_ncm():
     """UPDATE PRODU SET Cod_Ncm"""
-    #NCM
+    # NCM
     try:
         conn = connect_db()
         cursor = conn.cursor()
@@ -180,7 +188,7 @@ def update_ncm():
 		AND LEN(P.Cod_Ncm)=8
 		)
         """)
-        
+
         cursor.execute(sql)
         result = cursor.fetchall()
         produtos_ncm = []
@@ -190,9 +198,10 @@ def update_ncm():
                 produtos_ncm.append(int(i[0]))
             else:
                 pass
-        
-        logging.info(date_time()+" PRODUTOS COM NCM DIVERGENTE:"+str(len(produtos_ncm)))
-        
+
+        logging.info(date_time()+" PRODUTOS COM NCM DIVERGENTE:" +
+                     str(len(produtos_ncm)))
+
         for ean in produtos_ncm:
             sql = (f"""
             UPDATE PR SET PR.Cod_Ncm=PA.Cod_Ncm 
@@ -212,10 +221,9 @@ def update_ncm():
             cursor.execute(sql)
             cursor.commit()
 
-
         logging.info(date_time()+" UPDATE NCM CONCLUIDO")
         tela.labelInfoNcm.setText('Update NCM realizado')
-        
+
     except Exception as e:
         logging.info(date_time()+" UPDATE NCM ERRO")
         logging.warning(date_time()+' '+str(e))
@@ -228,7 +236,7 @@ def update_ncm():
 
 def update_cest():
     """UPDATE PRODU SET Cod_CEST"""
-    #CEST
+    # CEST
     try:
         conn = connect_db()
         cursor = conn.cursor()
@@ -241,7 +249,7 @@ def update_cest():
 		AND 
         (P.Cod_CEST != '' AND P.Cod_CEST IS NOT NULL AND LEN(P.Cod_CEST)=7)
         """)
-        
+
         cursor.execute(sql)
         result = cursor.fetchall()
         produtos_cest = []
@@ -251,8 +259,9 @@ def update_cest():
                 produtos_cest.append(int(i[0]))
             else:
                 pass
-        
-        logging.info(date_time()+" PRODUTOS COM CEST DIVERGENTE:"+str(len(produtos_cest)))
+
+        logging.info(date_time()+" PRODUTOS COM CEST DIVERGENTE:" +
+                     str(len(produtos_cest)))
 
         for ean in produtos_cest:
 
@@ -277,8 +286,7 @@ def update_cest():
 
         logging.info(date_time()+" UPDATE CEST CONCLUIDO")
         tela.labelInfoCest.setText('Update CEST realizado')
-        
-        
+
     except Exception as e:
         logging.info(date_time()+" UPDATE CEST ERRO")
         logging.warning(date_time()+' '+str(e))
@@ -291,7 +299,7 @@ def update_cest():
 
 def update_ctrlista():
     """UPDATE PRODU SET Ctr_Lista"""
-    #Ctr_Lista
+    # Ctr_Lista
     try:
         conn = connect_db()
         cursor = conn.cursor()
@@ -311,7 +319,7 @@ def update_ctrlista():
 		END
 		)
         """)
-        
+
         cursor.execute(sql)
         result = cursor.fetchall()
         produtos_ctrlista = []
@@ -321,8 +329,9 @@ def update_ctrlista():
                 produtos_ctrlista.append(int(i[0]))
             else:
                 pass
-        
-        logging.info(date_time()+" PRODUTOS COM CTR LISTA DIVERGENTE:"+str(len(produtos_ctrlista)))
+
+        logging.info(
+            date_time()+" PRODUTOS COM CTR LISTA DIVERGENTE:"+str(len(produtos_ctrlista)))
         for ean in produtos_ctrlista:
             sql = (f"""
             --LISTA P
@@ -387,7 +396,7 @@ def update_ctrlista():
 
         logging.info(date_time()+" UPDATE Ctr_Lista CONCLUIDO")
         tela.labelInfoLista.setText('Update Ctr_Lista realizado')
-        
+
     except Exception as e:
         logging.info(date_time()+" UPDATE Ctr_Lista ERRO")
         logging.warning(date_time()+' '+str(e))
@@ -398,14 +407,15 @@ def update_ctrlista():
         cursor.close()
         conn.close()
 
-#DDL
+# DDL
+
 
 def create_tables():
     """Create tables Produtos_Teste ,Produtos_PlanilhaABC and insert into Produtos_Teste"""
     try:
         conn = connect_db()
         cursor = conn.cursor()
-        sql=("""
+        sql = ("""
             IF NOT EXISTS 
             (SELECT * FROM sysobjects WHERE NAME='Produtos_Teste' AND xtype='U')
             CREATE TABLE Produtos_Teste 
@@ -423,9 +433,8 @@ def create_tables():
             """)
 
         cursor.execute(sql)
-        #cursor.commit()
+        # cursor.commit()
         logging.info(date_time()+' CREATE TABLE Produtos_Teste')
-
 
         sql = (f"""INSERT INTO Produtos_Teste
               SELECT Cod_Produt ,Des_Produt,Cod_EAN,NUM_REGMS, Cod_Ncm, Ctr_Lista,Cod_AbcFar,Cod_CEST,Cod_PriAtv FROM PRODU""")
@@ -450,9 +459,9 @@ def create_tables():
             """)
 
         cursor.execute(sql)
-        print(sql)
         cursor.commit()
-        logging.info(date_time()+" CREATE TABLE REALIZADA Produtos_PlanilhaABC")
+        logging.info(
+            date_time()+" CREATE TABLE REALIZADA Produtos_PlanilhaABC")
         tela.labelInfoCreate.setText('Tabelas Criadas')
 
     except Exception as e:
@@ -495,44 +504,46 @@ def drop_tables():
         logging.info(date_time()+" DROP FINALIZADA")
 
 def insert_ncm():
-    """Import NCM from the spreadsheet and insert it into the database"""
     try:
         conn = connect_db()
         cursor = conn.cursor()
-        lista_ncm=[]
-        for i, ean in enumerate(df['EAN']):
-            print(ean)
-            cod_ncm = df.loc[i,'NCM']
+        lista_ncm = []
+        sql = ("""
+        SELECT DISTINCT(P.Cod_Ncm)  FROM Produtos_PlanilhaABC P LEFT JOIN TBNCM N
+        ON P.Cod_Ncm = N.Cod_Ncm
+        WHERE (P.Cod_Ncm IS NOT NULL AND P.Cod_Ncm != '' AND LEN(P.Cod_Ncm)=8)
+        AND N.Cod_Ncm IS NULL
+        """)
+        cursor.execute(sql)
+        result = cursor.fetchall()
 
-            if math.isnan(cod_ncm):
-                cod_ncm =''
-            else:
-                cod_ncm = int(cod_ncm)
+        for ncm in result:
+            lista_ncm.append(ncm[0])
 
-            if cod_ncm != '':    
-                notexists = (f"IF NOT EXISTS (SELECT 1 FROM TBNCM WHERE COD_NCM ='{cod_ncm}') ")
-                values = (f"'{cod_ncm}','Outros','73','40' ,'98','8','73','4' ,'98' ,'8' ,NULL,'26.75' ,'31.50')")
-                insert = """
-                INSERT INTO [dbo].[TBNCM]
-                ([Cod_Ncm],[Des_Ncm],[Cst_PisEntTri],[Cst_PisSaiTri],[Cst_PisEntNaoTri],[Cst_PisSaiNaoTri],[Cst_CofEntTri],[Cst_CofSaiTri],[Cst_CofEntNaoTri],[Cst_CofSaiNaoTri],[Cod_SeqNat],[Alq_IbptNac],[Alq_IbptImp])
-                VALUES
-                ("""
-                
-                
-                sql = notexists + insert + values
-                cursor.execute(sql)
-                cursor.commit()
-            else:
-                print(f"{ean} COM NCM VAZIO")
-            
+        logging.info(date_time()+" NCMS A SEREM CADASTRADOS:"+str(len(lista_ncm)))
+
+        for ncm in lista_ncm:
+            notexists = (
+                f"IF NOT EXISTS (SELECT 1 FROM TBNCM WHERE COD_NCM ='{ncm}') ")
+            values = (
+                f"'{ncm}','Outros','73','40' ,'98','8','73','4' ,'98' ,'8' ,NULL,'26.75' ,'31.50')")
+            insert = """
+                    INSERT INTO [dbo].[TBNCM]
+                    ([Cod_Ncm],[Des_Ncm],[Cst_PisEntTri],[Cst_PisSaiTri],[Cst_PisEntNaoTri],[Cst_PisSaiNaoTri],[Cst_CofEntTri],[Cst_CofSaiTri],[Cst_CofEntNaoTri],[Cst_CofSaiNaoTri],[Cod_SeqNat],[Alq_IbptNac],[Alq_IbptImp])
+                    VALUES
+                    ("""
+            sql = notexists + insert + values
+            cursor.execute(sql)
+            cursor.commit()
+        
         logging.info(date_time()+" INSERT NCM REALIZADA")
         tela.labelInfoInsertNcm.setText('Insert NCM Realizado')
+
 
     except Exception as e:
         logging.info(date_time()+" INSERT NCM ERRO")
         logging.warning(date_time()+' '+str(e))
         tela.labelInfoInsertNcm.setText('Erro Insert NCM')
-        
     finally:
         logging.info(date_time()+" INSERT NCM FINALIZADA")
         cursor.close()
@@ -542,16 +553,16 @@ def insert_prod_pla():
     """Insert into Produtos_PlanilhaABC"""
     try:
         produtos_cad = 0
-        produtos_not_cad = 0        
+        produtos_not_cad = 0
         count = 0
         conn = connect_db()
         cursor = conn.cursor()
 
-        #Realiza select dos EANs e adiciona em uma lista para adicionar apenas produtos cadastrados no banco
+        # Realiza select dos EANs e adiciona em uma lista para adicionar apenas produtos cadastrados no banco
         sql = """SELECT Cod_EAN FROM Produtos_Teste"""
         cursor.execute(sql)
         result = cursor.fetchall()
-        
+
         for i in result:
             if i[0] != None:
                 produtos.append(int(i[0]))
@@ -560,38 +571,39 @@ def insert_prod_pla():
                 pass
 
         logging.info(date_time()+" RESULT EAN:"+str(count))
-        
 
         for i, ean in enumerate(df['EAN']):
-            
-            num_regms = df.loc[i,'Registro_ANVISA']
-            cod_ncm = df.loc[i,'NCM']
-            ctr_lista = df.loc[i,'Descricao_Lista']
-            cod_abcfar = df.loc[i,'ID_Produto']
-            cod_cest = df.loc[i,'CEST']
-            des_priatv = df.loc[i,'Composicao']
+
+            num_regms = df.loc[i, 'Registro_ANVISA']
+            cod_ncm = df.loc[i, 'NCM']
+            ctr_lista = df.loc[i, 'Descricao_Lista']
+            cod_abcfar = df.loc[i, 'ID_Produto']
+            cod_cest = df.loc[i, 'CEST']
+            des_priatv = df.loc[i, 'Composicao']
 
             if ean in produtos:
-                #VALIDA NCM
+                # VALIDA NCM
                 if math.isnan(cod_ncm):
-                    cod_ncm =''
+                    cod_ncm = ''
                 else:
                     cod_ncm = int(cod_ncm)
-                
-                #VALIDA CEST
+
+                # VALIDA CEST
                 if math.isnan(cod_cest):
-                    cod_cest =''
+                    cod_cest = ''
                 else:
                     cod_cest = int(cod_cest)
-                    
-                notexists = (f"IF NOT EXISTS (SELECT 1 FROM Produtos_PlanilhaABC WHERE Cod_EAN ='{ean}') ")
-                values = (f"'{ean}','{num_regms}','{cod_ncm}','{ctr_lista}','{cod_abcfar}','{cod_cest}','{des_priatv}')")
+
+                notexists = (
+                    f"IF NOT EXISTS (SELECT 1 FROM Produtos_PlanilhaABC WHERE Cod_EAN ='{ean}') ")
+                values = (
+                    f"'{ean}','{num_regms}','{cod_ncm}','{ctr_lista}','{cod_abcfar}','{cod_cest}','{des_priatv}')")
                 insert = """INSERT INTO Produtos_PlanilhaABC ([Cod_EAN],[NUM_REGMS],[Cod_Ncm],[Ctr_Lista],[Cod_AbcFar],[Cod_CEST],[Des_PriAtv])
                             VALUES ("""
 
-                sql = notexists+ insert + values
+                sql = notexists + insert + values
                 produtos_abc.append(ean)
-               
+
                 cursor.execute(sql)
                 cursor.commit()
                 produtos_cad += 1
@@ -599,27 +611,24 @@ def insert_prod_pla():
             else:
                 produtos_not_cad += 1
 
-          
         logging.info(date_time()+" INSERT TABLE REALIZADA")
 
         logging.info(date_time()+" CADASTRADOS:"+str(produtos_cad))
         logging.info(date_time()+" NAO CADASTRADOS:"+str(produtos_not_cad))
         tela.labelInfoInsert.setText('Insert Realizado')
-        
 
     except Exception as e:
         logging.info(date_time()+" INSERT TABLE ERRO")
         logging.warning(date_time()+' '+str(e))
         tela.labelInfoInsert.setText('Erro Insert')
-        
+
     finally:
         logging.info(date_time()+" INSERT TABLE FINALIZADA")
         cursor.close()
         conn.close()
-        
 
 
-#Assign functions to buttons
+# Assign functions to buttons
 tela.create.clicked.connect(create_tables)
 tela.insert.clicked.connect(insert_prod_pla)
 tela.insertNcm.clicked.connect(insert_ncm)
@@ -632,9 +641,6 @@ tela.btn_update_lista.clicked.connect(update_ctrlista)
 tela.excel.clicked.connect(gerar_excel)
 tela.drop.clicked.connect(drop_tables)
 
-#Start screen
+# Start screen
 tela.show()
 app.exec()
-
-
-
