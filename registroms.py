@@ -11,6 +11,10 @@ import math
 app = QtWidgets.QApplication([])
 tela = uic.loadUi("tela.ui")
 
+#User and Password - DB
+user_db=''
+password_db=''
+
 
 def data_atual():
     """Retorna data atual"""
@@ -22,8 +26,7 @@ def date_time():
 
 # Cria log
 log_format = '%(asctime)'
-logging.basicConfig(filename='infarmaBal'+data_atual() +
-                    '.log', filemode='a', level=logging.INFO)
+logging.basicConfig(filename='infarmaBal'+data_atual() +'.log', filemode='a', level=logging.INFO)
 logger = logging.getLogger('root')
 
 logging.info(date_time()+" PROGRAMA INICIADO")
@@ -52,8 +55,7 @@ except Exception as e:
 
 # realiza conexão com o banco
 try:
-    conn = pyodbc.connect(
-        f'DRIVER={driverOdbc};SERVER={hostName};DATABASE={dataBase};UID='';PWD='';')
+    conn = pyodbc.connect(f"DRIVER={driverOdbc};SERVER={hostName};DATABASE={dataBase};UID={user_db};PWD={password_db};")
     cursor = conn.cursor()
     logging.info(date_time()+" CONEXAO DB REALIZADA")
 except Exception as e:
@@ -65,17 +67,13 @@ finally:
 
 
 # Funções DB
-cnxn = (
-    f'DRIVER={driverOdbc};SERVER={hostName};DATABASE={dataBase};UID='';PWD='';')
-produtos = []
-produtos_abc = []
+cnxn = (f"DRIVER={driverOdbc};SERVER={hostName};DATABASE={dataBase};UID={user_db};PWD={password_db};")
 
 
 def connect_db():
     """Connect DB"""
     try:
-        conn = pyodbc.connect(
-            f'DRIVER={driverOdbc};SERVER={hostName};DATABASE={dataBase};UID='';PWD='';')
+        conn = pyodbc.connect(f"DRIVER={driverOdbc};SERVER={hostName};DATABASE={dataBase};UID={user_db};PWD={password_db};")
         logging.info(date_time()+" CONNECT DB REALIZADA")
         return conn
     except Exception as e:
@@ -552,6 +550,8 @@ def insert_ncm():
 def insert_prod_pla():
     """Insert into Produtos_PlanilhaABC"""
     try:
+        produtos =[]
+        produtos_abc=[]
         produtos_cad = 0
         produtos_not_cad = 0
         count = 0
