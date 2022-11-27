@@ -12,8 +12,8 @@ app = QtWidgets.QApplication([])
 tela = uic.loadUi("tela.ui")
 
 #User and Password - DB
-user_db=''
-password_db=''
+user_db='sa'
+password_db='infarma2015.1'
 
 
 def data_atual():
@@ -405,6 +405,78 @@ def update_ctrlista():
         cursor.close()
         conn.close()
 
+def update_isento():
+    try:
+        cnxn_url = URL.create("mssql+pyodbc", query={"odbc_connect": cnxn})
+        engine = create_engine(cnxn_url)
+
+        query = ("""SELECT Cod_Produt,Des_Produt, Cod_Ncm, NUM_REGMS,Flg_IseRegMS, Des_IseRegMS FROM PRODU
+        where (Cod_Ncm like '3001%'
+        or Cod_Ncm like '3002%'
+        or Cod_Ncm like '3003%'
+        or Cod_Ncm like '3004%'
+        or Cod_Ncm like '3005%'
+        or Cod_Ncm like '3006%')
+        AND (
+        NUM_REGMS = '' OR
+        NUM_REGMS IS NULL OR
+        LEN(NUM_REGMS)!=13
+        )
+        AND Flg_IseRegMS = 0""")
+
+        isento_ms = pandas.read_sql_query(query, engine)
+        isento_ms.to_excel("Produtos_Isentos_MS.xlsx",
+                       sheet_name='atual', index=False)
+
+        logging.info(date_time()+" GERAR EXCEL Produtos_Isentos_MS REALIZADO")
+
+        conn = connect_db()
+        cursor = conn.cursor()
+        sql = ("""SELECT Cod_Produt FROM PRODU
+        where (Cod_Ncm like '3001%'
+        or Cod_Ncm like '3002%'
+        or Cod_Ncm like '3003%'
+        or Cod_Ncm like '3004%'
+        or Cod_Ncm like '3005%'
+        or Cod_Ncm like '3006%')
+        AND (
+        NUM_REGMS = '' OR
+        NUM_REGMS IS NULL OR
+        LEN(NUM_REGMS)!=13
+        )
+        AND Flg_IseRegMS = 0
+        """)
+
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        isento_ms =[]
+        for i in result:
+            isento_ms.append(i[0])
+        
+        logging.info(date_time()+" PRODUTOS COM MS INVALIDO:" + str(len(isento_ms)))
+
+        count =0
+
+        for i in isento_ms:
+            sql = (f"""UPDATE PRODU SET NUM_REGMS = '0000000000000' WHERE Cod_Produt ={i}""")
+            cursor.execute(sql)
+            cursor.commit()
+            count+=1
+            print(str(count)+" - "+str(len(isento_ms)))
+        
+        logging.info(date_time()+" UPDATE MS ISENTO CONCLUIDO")
+        tela.labelInfoMsInvalido.setText('Update MS Isento realizado')
+
+    except Exception as e:
+            logging.info(date_time()+" ISENTO MS ERRO")
+            logging.warning(date_time()+' '+str(e))
+            tela.labelInfoMsInvalido.setText('Erro Isento MS')
+
+    finally:
+            logging.info(date_time()+" UPDATE MS ISENTO FINALIZADO")
+            cursor.close()
+            conn.close()
+
 # DDL
 
 
@@ -637,6 +709,7 @@ tela.btn_update_ncm.clicked.connect(update_ncm)
 tela.btn_update_ms.clicked.connect(update_ms)
 tela.btn_update_cest.clicked.connect(update_cest)
 tela.btn_update_lista.clicked.connect(update_ctrlista)
+tela.invalidoMs.clicked.connect(update_isento)
 
 tela.excel.clicked.connect(gerar_excel)
 tela.drop.clicked.connect(drop_tables)
