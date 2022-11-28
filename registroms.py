@@ -12,8 +12,8 @@ app = QtWidgets.QApplication([])
 tela = uic.loadUi("tela.ui")
 
 #User and Password - DB
-user_db='sa'
-password_db='infarma2015.1'
+user_db=''
+password_db=''
 
 
 def data_atual():
@@ -116,6 +116,7 @@ def update_ms():
     try:
         conn = connect_db()
         cursor = conn.cursor()
+        count =0
         sql = ("""
         SELECT T.Cod_EAN
         FROM PRODU T INNER JOIN Produtos_PlanilhaABC P
@@ -152,7 +153,8 @@ def update_ms():
             """)
             cursor.execute(sql)
             cursor.commit()
-            print(sql)
+            count+=1
+            print(str(count)+" - "+str(len(produtos_ms)))
 
         print("Concluido")
         logging.info(date_time()+" UPDATE NUM_REGMS CONCLUIDO")
@@ -174,6 +176,7 @@ def update_ncm():
     try:
         conn = connect_db()
         cursor = conn.cursor()
+        count =0
 
         sql = ("""
         SELECT T.Cod_EAN
@@ -218,6 +221,8 @@ def update_ncm():
 
             cursor.execute(sql)
             cursor.commit()
+            count+=1
+            print(str(count)+" - "+str(len(produtos_ncm)))
 
         logging.info(date_time()+" UPDATE NCM CONCLUIDO")
         tela.labelInfoNcm.setText('Update NCM realizado')
@@ -238,6 +243,7 @@ def update_cest():
     try:
         conn = connect_db()
         cursor = conn.cursor()
+        count =0
 
         sql = ("""
         SELECT T.Cod_EAN
@@ -268,7 +274,8 @@ def update_cest():
             FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
             ON PR.Cod_EAN= PA.Cod_EAN
             WHERE PR.Cod_EAN = '{ean}'
-            A.Cod_CEST IS NOT NULL AND 
+            AND
+            PA.Cod_CEST IS NOT NULL AND 
             PA.Cod_CEST !='' AND 
             LEN(PA.Cod_CEST)=7
             AND
@@ -281,6 +288,8 @@ def update_cest():
 
             cursor.execute(sql)
             cursor.commit()
+            count+=1
+            print(str(count)+" - "+str(len(produtos_cest)))
 
         logging.info(date_time()+" UPDATE CEST CONCLUIDO")
         tela.labelInfoCest.setText('Update CEST realizado')
@@ -301,6 +310,7 @@ def update_ctrlista():
     try:
         conn = connect_db()
         cursor = conn.cursor()
+        count =0
 
         sql = ("""
         SELECT T.Cod_EAN
@@ -337,6 +347,7 @@ def update_ctrlista():
             FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
             ON PR.Cod_EAN= PA.Cod_EAN
             WHERE PR.Cod_EAN = '{ean}'
+            AND
             PA.Ctr_Lista = 'LISTA POSITIVA'
             AND 
              (
@@ -352,6 +363,7 @@ def update_ctrlista():
             FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
             ON PR.Cod_EAN= PA.Cod_EAN
             WHERE PR.Cod_EAN = '{ean}'
+            AND
             PA.Ctr_Lista = 'LISTA NEGATIVA'
             AND 
              (
@@ -366,6 +378,7 @@ def update_ctrlista():
             FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
             ON PR.Cod_EAN= PA.Cod_EAN
             WHERE PR.Cod_EAN = '{ean}'
+            AND
             PA.Ctr_Lista = 'LISTA NEUTRA'
             AND 
              (
@@ -380,6 +393,7 @@ def update_ctrlista():
             FROM PRODU PR INNER JOIN Produtos_PlanilhaABC PA 
             ON PR.Cod_EAN= PA.Cod_EAN
             WHERE PR.Cod_EAN = '{ean}'
+            AND
             PA.Ctr_Lista = 'OUTROS'
             AND 
              (
@@ -391,6 +405,8 @@ def update_ctrlista():
 
         cursor.execute(sql)
         cursor.commit()
+        count+=1
+        print(str(count)+" - "+str(len(produtos_ctrlista)))
 
         logging.info(date_time()+" UPDATE Ctr_Lista CONCLUIDO")
         tela.labelInfoLista.setText('Update Ctr_Lista realizado')
